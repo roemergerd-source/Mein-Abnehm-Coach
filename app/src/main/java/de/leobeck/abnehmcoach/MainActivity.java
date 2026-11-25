@@ -7,7 +7,11 @@ import android.widget.FrameLayout;
 import android.webkit.WebView;
 public class MainActivity extends Activity {
  private void reminderDialog(){
- new android.app.AlertDialog.Builder(this).setTitle("Tägliche Erinnerung").setMessage("Ungefähr um 08:00 Uhr an das Tagesprotokoll erinnern. Android kann die Zustellung verzögern.").setPositiveButton("Aktivieren",(d,v)->{
+ android.content.SharedPreferences prefs=getSharedPreferences("reminders",0);
+ android.widget.TimePicker picker=new android.widget.TimePicker(this);
+ picker.setIs24HourView(true);picker.setHour(prefs.getInt("hour",8));picker.setMinute(prefs.getInt("minute",0));
+ new android.app.AlertDialog.Builder(this).setTitle("Tägliche Erinnerung – "+(prefs.getBoolean("enabled",false)?"aktiv":"aus")).setView(picker).setPositiveButton("Speichern und aktivieren",(d,v)->{
+ prefs.edit().putInt("hour",picker.getHour()).putInt("minute",picker.getMinute()).apply();
  if(android.os.Build.VERSION.SDK_INT>=33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=0) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},42);
  else ReminderReceiver.enable(this,true);
  }).setNegativeButton("Deaktivieren",(d,v)->ReminderReceiver.enable(this,false)).setNeutralButton("Abbrechen",null).show();
