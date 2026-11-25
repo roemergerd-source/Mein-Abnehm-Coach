@@ -32,6 +32,14 @@ jobs:
           KS="$RUNNER_TEMP/coach.p12"
           trap 'rm -f "$KS"' EXIT
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KS"
+          if ! keytool -list -storetype PKCS12 -keystore "$KS" -storepass:env KEYSTORE_PASSWORD >/dev/null 2>&1; then
+            export KEYSTORE_PASSWORD="$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r\n')"
+            if ! keytool -list -storetype PKCS12 -keystore "$KS" -storepass:env KEYSTORE_PASSWORD >/dev/null 2>&1; then
+              echo "::error::PKCS12 konnte nicht geöffnet werden. Schlüssel und Passwort gemeinsam prüfen."
+              exit 1
+            fi
+          fi
+          echo "PKCS12 erfolgreich geöffnet."
           SIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
           test -n "$SIGNER"
           mkdir -p signed
