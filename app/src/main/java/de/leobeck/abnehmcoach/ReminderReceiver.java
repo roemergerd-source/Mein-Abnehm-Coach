@@ -1,0 +1,10 @@
+package de.leobeck.abnehmcoach;
+import android.app.*;
+import android.content.*;
+import java.util.Calendar;
+public class ReminderReceiver extends BroadcastReceiver {
+ static PendingIntent alarm(Context c){return PendingIntent.getBroadcast(c,1,new Intent(c,ReminderReceiver.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
+ static void enable(Context c,boolean on){c.getSharedPreferences("reminders",0).edit().putBoolean("enabled",on).apply(); AlarmManager a=(AlarmManager)c.getSystemService(Context.ALARM_SERVICE);a.cancel(alarm(c));if(on)schedule(c);}
+ static void schedule(Context c){Calendar n=Calendar.getInstance();n.set(Calendar.HOUR_OF_DAY,8);n.set(Calendar.MINUTE,0);n.set(Calendar.SECOND,0);n.set(Calendar.MILLISECOND,0);if(n.getTimeInMillis()<=System.currentTimeMillis())n.add(Calendar.DATE,1);((AlarmManager)c.getSystemService(Context.ALARM_SERVICE)).setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,n.getTimeInMillis(),alarm(c));}
+ @Override public void onReceive(Context c,Intent i){if(!c.getSharedPreferences("reminders",0).getBoolean("enabled",false))return;if("android.intent.action.BOOT_COMPLETED".equals(i.getAction())){schedule(c);return;}schedule(c);if(android.os.Build.VERSION.SDK_INT>=33 && c.checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=0)return;NotificationManager nm=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);if(android.os.Build.VERSION.SDK_INT>=26)nm.createNotificationChannel(new NotificationChannel("coach_daily","Tageserinnerung",NotificationManager.IMPORTANCE_DEFAULT));Notification.Builder b=android.os.Build.VERSION.SDK_INT>=26?new Notification.Builder(c,"coach_daily"):new Notification.Builder(c);nm.notify(1,b.setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Mein Abnehm-Coach").setContentText("Zeit für dein Tagesprotokoll.").setAutoCancel(true).setVisibility(Notification.VISIBILITY_PRIVATE).setContentIntent(PendingIntent.getActivity(c,2,new Intent(c,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE)).build());}
+}
