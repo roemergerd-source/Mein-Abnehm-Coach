@@ -6,6 +6,16 @@ import android.view.WindowInsets;
 import android.widget.FrameLayout;
 import android.webkit.WebView;
 public class MainActivity extends Activity {
+ private void openCoach(String report){
+ if(report==null || report.length()>20000)return;
+ android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+ android.content.ClipData clip=android.content.ClipData.newPlainText("Abnehm-Coach Wochenbericht",report);
+ if(android.os.Build.VERSION.SDK_INT>=33){android.os.PersistableBundle extras=new android.os.PersistableBundle();extras.putBoolean("android.content.extra.IS_SENSITIVE",true);clip.getDescription().setExtras(extras);}
+ clipboard.setPrimaryClip(clip);
+ android.widget.Toast.makeText(this,"Bericht kopiert. In ChatGPT einfügen und prüfen.",android.widget.Toast.LENGTH_LONG).show();
+ android.content.Intent app=new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("https://chatgpt.com/"));app.setPackage("com.openai.chatgpt");
+ try{startActivity(app);}catch(android.content.ActivityNotFoundException e){try{startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("https://chatgpt.com/")));}catch(android.content.ActivityNotFoundException ignored){}}
+ }
  private void reminderDialog(){
  android.content.SharedPreferences prefs=getSharedPreferences("reminders",0);
  android.widget.TimePicker picker=new android.widget.TimePicker(this);
@@ -34,7 +44,7 @@ public class MainActivity extends Activity {
   getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
   w.setWebViewClient(new android.webkit.WebViewClient(){
    @Override public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest req){
-    if("coach".equals(req.getUrl().getScheme())) { if("close".equals(req.getUrl().getHost())) finish(); if("reminders".equals(req.getUrl().getHost())) reminderDialog(); }
+    if("coach".equals(req.getUrl().getScheme())) { if("close".equals(req.getUrl().getHost())) finish(); if("reminders".equals(req.getUrl().getHost())) reminderDialog(); if("chatgpt".equals(req.getUrl().getHost()) && req.isForMainFrame()) openCoach(req.getUrl().getQueryParameter("report")); }
     return true;
    }
   });
