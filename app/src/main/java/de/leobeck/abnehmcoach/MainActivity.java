@@ -16,6 +16,9 @@ public class MainActivity extends Activity {
  android.content.Intent app=new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("https://chatgpt.com/"));app.setPackage("com.openai.chatgpt");
  try{startActivity(app);}catch(android.content.ActivityNotFoundException e){try{startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("https://chatgpt.com/")));}catch(android.content.ActivityNotFoundException ignored){}}
  }
+ private void scanBarcode(WebView view){
+ com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(this).startScan().addOnSuccessListener(code->{String raw=code.getRawValue();if(raw!=null&&raw.matches("[0-9]{8,14}"))view.evaluateJavascript("scannedBarcode("+org.json.JSONObject.quote(raw)+")",null);else android.widget.Toast.makeText(this,"Kein unterstützter Produktbarcode.",0).show();}).addOnFailureListener(e->android.widget.Toast.makeText(this,"Scanner nicht verfügbar. Barcode bitte manuell eingeben.",1).show());
+ }
  private boolean searching=false;
  private void searchFood(WebView view,String q){
  if(searching||q==null||q.length()<3||q.length()>100)return;
@@ -63,7 +66,7 @@ public class MainActivity extends Activity {
   getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
   w.setWebViewClient(new android.webkit.WebViewClient(){
    @Override public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest req){
-    if("coach".equals(req.getUrl().getScheme())) { if("close".equals(req.getUrl().getHost())) finish(); if("reminders".equals(req.getUrl().getHost())) reminderDialog(); if("foodsearch".equals(req.getUrl().getHost()) && req.isForMainFrame()) searchFood(view,req.getUrl().getQueryParameter("q")); if("chatgpt".equals(req.getUrl().getHost()) && req.isForMainFrame()) openCoach(req.getUrl().getQueryParameter("report")); }
+    if("coach".equals(req.getUrl().getScheme())) { if("close".equals(req.getUrl().getHost())) finish(); if("reminders".equals(req.getUrl().getHost())) reminderDialog(); if("scan".equals(req.getUrl().getHost()) && req.isForMainFrame()) scanBarcode(view); if("foodsearch".equals(req.getUrl().getHost()) && req.isForMainFrame()) searchFood(view,req.getUrl().getQueryParameter("q")); if("chatgpt".equals(req.getUrl().getHost()) && req.isForMainFrame()) openCoach(req.getUrl().getQueryParameter("report")); }
     return true;
    }
   });
