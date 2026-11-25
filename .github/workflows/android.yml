@@ -20,7 +20,24 @@ jobs:
         with:
           gradle-version: '8.9'
       - run: gradle assembleDebug --stacktrace
+      - name: APK dauerhaft signieren
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          umask 077
+          KS="$RUNNER_TEMP/coach.p12"
+          trap 'rm -f "$KS"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KS"
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          test -n "$SIGNER"
+          mkdir -p signed
+          "$SIGNER" sign --ks "$KS" --ks-type PKCS12 --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD --out signed/Mein-Abnehm-Coach.apk app/build/outputs/apk/debug/app-debug.apk
+          "$SIGNER" verify --verbose --print-certs signed/Mein-Abnehm-Coach.apk
       - uses: actions/upload-artifact@v4
         with:
           name: Mein-Abnehm-Coach-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: signed/Mein-Abnehm-Coach.apk
