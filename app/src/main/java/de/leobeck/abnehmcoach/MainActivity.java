@@ -16,6 +16,25 @@ public class MainActivity extends Activity {
  android.content.Intent app=new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("https://chatgpt.com/"));app.setPackage("com.openai.chatgpt");
  try{startActivity(app);}catch(android.content.ActivityNotFoundException e){try{startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("https://chatgpt.com/")));}catch(android.content.ActivityNotFoundException ignored){}}
  }
+ private boolean searching=false;
+ private void searchFood(WebView view,String q){
+ if(searching||q==null||q.length()<3||q.length()>100)return;
+ searching=true;
+ new Thread(()->{
+ org.json.JSONArray result=new org.json.JSONArray();
+ java.net.HttpURLConnection c=null;
+ try{
+ String fields="product_name,brands,nutriments";
+ boolean barcode=q.matches("[0-9]{8,14}");
+ String url=barcode?"https://world.openfoodfacts.org/api/v2/product/"+q+".json?fields="+fields:"https://de.openfoodfacts.org/cgi/search.pl?search_terms="+java.net.URLEncoder.encode(q,"UTF-8")+"&search_simple=1&action=process&json=1&page_size=15&fields="+fields;
+ c=(java.net.HttpURLConnection)new java.net.URL(url).openConnection();c.setConnectTimeout(12000);c.setReadTimeout(15000);c.setRequestProperty("User-Agent","Mein-Abnehm-Coach/2.8 (Android; Leobeck)");
+ java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();try(java.io.InputStream in=c.getInputStream()){byte[] buf=new byte[4096];int n;while((n=in.read(buf))!=-1){if(bytes.size()+n>2000000)throw new java.io.IOException("Response too large");bytes.write(buf,0,n);}}
+ org.json.JSONObject root=new org.json.JSONObject(bytes.toString("UTF-8"));org.json.JSONArray products=barcode?new org.json.JSONArray().put(root.optJSONObject("product")):root.optJSONArray("products");
+ if(products!=null)for(int i=0;i<products.length();i++){org.json.JSONObject x=products.optJSONObject(i);if(x==null)continue;org.json.JSONObject v=x.optJSONObject("nutriments");if(v==null)continue;String name=x.optString("product_name","").trim();double k=v.optDouble("energy-kcal_100g",Double.NaN),p=v.optDouble("proteins_100g",Double.NaN);if(name.isEmpty()||!Double.isFinite(k)||!Double.isFinite(p)||k<0||k>900||p<0||p>100)continue;String brand=x.optString("brands","");if(!brand.isEmpty())name+=" ("+brand+")";result.put(new org.json.JSONArray().put(name+" [Open Food Facts]").put(k).put(p));}
+ }catch(Exception ignored){}finally{if(c!=null)c.disconnect();}
+ runOnUiThread(()->{searching=false;view.evaluateJavascript("onlineResults("+result.toString().replace("\u2028","\\u2028").replace("\u2029","\\u2029")+")",null);});
+ }).start();
+ }
  private void reminderDialog(){
  android.content.SharedPreferences prefs=getSharedPreferences("reminders",0);
  android.widget.TimePicker picker=new android.widget.TimePicker(this);
@@ -44,7 +63,7 @@ public class MainActivity extends Activity {
   getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
   w.setWebViewClient(new android.webkit.WebViewClient(){
    @Override public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest req){
-    if("coach".equals(req.getUrl().getScheme())) { if("close".equals(req.getUrl().getHost())) finish(); if("reminders".equals(req.getUrl().getHost())) reminderDialog(); if("chatgpt".equals(req.getUrl().getHost()) && req.isForMainFrame()) openCoach(req.getUrl().getQueryParameter("report")); }
+    if("coach".equals(req.getUrl().getScheme())) { if("close".equals(req.getUrl().getHost())) finish(); if("reminders".equals(req.getUrl().getHost())) reminderDialog(); if("foodsearch".equals(req.getUrl().getHost()) && req.isForMainFrame()) searchFood(view,req.getUrl().getQueryParameter("q")); if("chatgpt".equals(req.getUrl().getHost()) && req.isForMainFrame()) openCoach(req.getUrl().getQueryParameter("report")); }
     return true;
    }
   });
